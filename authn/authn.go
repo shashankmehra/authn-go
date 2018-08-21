@@ -41,11 +41,24 @@ func NewClient(config Config) (*Client, error) {
 //
 // If the JWT does not verify, the returned error will explain why. This is for debugging purposes.
 func (ac *Client) SubjectFrom(idToken string) (string, error) {
-	claims, err := ac.verifier.GetVerifiedClaims(idToken)
+	claims, err := ac.ClaimsFrom(idToken)
 	if err != nil {
 		return "", err
 	}
 	return claims.Subject, nil
+}
+
+// ClaimsFrom will return all the claims inside the given idToken if and only if the token is a valid
+// JWT that passes all verification requirements. If you require only the account ID you can use SubjectFrom
+// or use claim.Subject.
+//
+// If the JWT does not verify, the returned error will explain why. This is for debugging purposes.
+func (ac *Client) ClaimsFrom(idToken string) (*AuthnClaims, error) {
+	claims, err := ac.verifier.GetVerifiedClaims(idToken)
+	if err != nil {
+		return nil, err
+	}
+	return claims, nil
 }
 
 // DefaultClient can be initialized by Configure and used by SubjectFrom.
@@ -73,4 +86,10 @@ func Configure(config Config) error {
 // given idToken.
 func SubjectFrom(idToken string) (string, error) {
 	return defaultClient().SubjectFrom(idToken)
+}
+
+// ClaimsFrom will use the the client configured by Configure to extract the claims from the
+// given idToken.
+func ClaimsFrom(idToken string) (*AuthnClaims, error) {
+	return defaultClient().ClaimsFrom(idToken)
 }

@@ -36,13 +36,13 @@ func TestIDTokenVerifier(t *testing.T) {
 	// factory defaults
 	randInt, err := rand.Int(rand.Reader, big.NewInt(99999))
 	require.NoError(t, err)
-	defaultClaims := jwt.Claims{
-		Issuer:   config.Issuer,
-		Audience: jwt.Audience{config.Audience},
-		Subject:  randInt.String(),
-		Expiry:   jwt.NewNumericDate(time.Now().Add(time.Hour)),
-		IssuedAt: jwt.NewNumericDate(time.Now().Add(-time.Minute)),
-	}
+	defaultClaims := AuthnClaims{}
+	defaultClaims.Issuer = config.Issuer
+	defaultClaims.Audience = jwt.Audience{config.Audience}
+	defaultClaims.Subject = randInt.String()
+	defaultClaims.Expiry = jwt.NewNumericDate(time.Now().Add(time.Hour))
+	defaultClaims.IssuedAt = jwt.NewNumericDate(time.Now().Add(-time.Minute))
+	defaultClaims.AuthTime = jwt.NewNumericDate(time.Now().Add(-time.Hour))
 	defaultSigner, err := jose.NewSigner(
 		jose.SigningKey{Algorithm: jose.RS256, Key: defaultJWK},
 		(&jose.SignerOptions{}).WithType("JWT"),
@@ -61,11 +61,12 @@ func TestIDTokenVerifier(t *testing.T) {
 
 	t.Run("audience string", func(t *testing.T) {
 		token, err := jwt.Signed(defaultSigner).Claims(map[string]interface{}{
-			"iss": defaultClaims.Issuer,
-			"aud": config.Audience,
-			"sub": defaultClaims.Subject,
-			"exp": defaultClaims.Expiry.Time().Unix(),
-			"iat": defaultClaims.IssuedAt.Time().Unix(),
+			"iss":       defaultClaims.Issuer,
+			"aud":       config.Audience,
+			"sub":       defaultClaims.Subject,
+			"exp":       defaultClaims.Expiry.Time().Unix(),
+			"iat":       defaultClaims.IssuedAt.Time().Unix(),
+			"auth_time": defaultClaims.AuthTime.Time().Unix(),
 		}).CompactSerialize()
 		require.NoError(t, err)
 
@@ -73,6 +74,7 @@ func TestIDTokenVerifier(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, defaultClaims.Subject, claims.Subject)
+		assert.Equal(t, defaultClaims.AuthTime, claims.AuthTime)
 	})
 
 	t.Run("URL-equivalent issuer", func(t *testing.T) {
